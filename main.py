@@ -3,6 +3,7 @@ import discord  # Import discord dependency
 import requests
 import json
 import string
+from keep_alive import keep_alive
 from OSRSItem import OSRSItem
 
 intents = discord.Intents.default()
@@ -214,6 +215,7 @@ async def on_message(message):
         else:
           await message.channel.send("Invalid")
       margin.clear()
-         
+
+keep_alive()
 my_secret = os.environ.get('TOKEN')  # Environment variables - Hidden Token
 client.run(my_secret)  # Run the client
