@@ -228,13 +228,12 @@ async def PrintHerbs(message):
 
 # async def PrintImage(message, p, num, size):
 #   await message.channel.send("Processing")
-#   match size:
-#     case 256:
-#       s = "256x256"
-#     case 512:
-#       s = "512x512"
-#     case 1024:
-#       s = "1024x1024"
+#   if(size == 256):  
+#     s = "256x256"
+#   elif(size == 512):
+#     s = "512x512"
+#   elif(size == 1024):
+#     s = "1024x1024"
 #   response = openai.Image.create(
 #     prompt = str(p),
 #     n = int(num),
@@ -325,13 +324,12 @@ async def on_message(message):
       if(re.search("^\d+(k|m|b|)$", mess[1])):
         deg = mess[1][len(mess[1])-1]
         m = mess[1].rstrip("kmb")
-        match(deg):
-          case "k":
-            m += "000"
-          case "m":
-            m += "000000"
-          case "b":
-            m += "000000000"
+        if(deg == "k"):  
+          m += "000"          
+        elif(deg == "m"):
+          m += "000000"
+        elif(deg == "b"):
+          m += "000000000"
         await PrintMargins(message, int(m))
         margin.clear()
       else:
@@ -375,19 +373,18 @@ async def on_message(message):
   if message.content.startswith('!recipe'):
     mess = message.content.split()
     if(len(mess) == 2):
-      match(mess[1].lower()):
-        case "breakfast":
-          await PrintRecipe(message, "Breakfast")
-        case "lunch":
-          await PrintRecipe(message, "Lunch")
-        case "dinner":
-          await PrintRecipe(message, "Dinner")
-        case "snack":
-          await PrintRecipe(message, "Snack")
-        case "teatime":
-          await PrintRecipe(message, "Teatime")
-        case _: 
-          await message.channel.send("Select either Breakfast, Lunch, Dinner, Snack or Teatime")
+      if(mess[1].lower() == "breakfast"):  
+        await PrintRecipe(message, "Breakfast")         
+      elif(mess[1].lower() == "lunch"):
+        await PrintRecipe(message, "Lunch")
+      elif(mess[1].lower() == "dinner"):
+        await PrintRecipe(message, "Dinner")
+      elif(mess[1].lower() == "snack"):
+        await PrintRecipe(message, "Snack")
+      elif(mess[1].lower() == "teatime"):
+        await PrintRecipe(message, "Teatime")
+      else:
+        await message.channel.send("Select either Breakfast, Lunch, Dinner, Snack or Teatime")
 
 my_secret = os.environ.get('TOKEN')  # Environment variables - Hidden Token
 client.run(my_secret)  # Run the client
