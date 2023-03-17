@@ -325,7 +325,7 @@ async def on_message(message):
       if(re.search("^\d+(k|m|b|)$", mess[1])):
         deg = mess[1][len(mess[1])-1]
         m = mess[1].rstrip("kmb")
-        match deg:
+        match(deg):
           case "k":
             m += "000"
           case "m":
