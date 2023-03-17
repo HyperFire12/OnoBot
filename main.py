@@ -15,7 +15,6 @@ client = discord.Client(intents=intents)
 mongoclient = pymongo.MongoClient("mongodb+srv://HyperFire12:"+os.environ.get('PW')+"@profiles.yc6ochs.mongodb.net/?retryWrites=true&w=majority")
 db = mongoclient.profiles
 # openai.api_key = os.environ.get("AI_TOKEN")
-# Help
 
 daily = [
   
