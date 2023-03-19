@@ -7,6 +7,7 @@ import pymongo
 # import openai
 import random
 import string
+import math
 from OSRSItem import OSRSItem
 
 intents = discord.Intents.default()
@@ -209,8 +210,8 @@ async def PrintHerbs(message):
     snap = sw[1]
   else:
     snap = sw[0]
-  rp = rweed*88 - rseed*9
-  sp = snap*88 - sseed*9
+  rp = math.floor(rweed*88*0.99) - rseed*9
+  sp = math.floor(snap*88*0.99) - sseed*9
   if(rp > sp):
     await message.channel.send("You should plant Ranarr Seeds")
     await message.channel.send("`Ranarr Seed: " + "{:,}".format(rseed) +"`\n`Ranarr Weed: " + 
