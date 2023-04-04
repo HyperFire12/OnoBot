@@ -39,6 +39,8 @@ async def PrintHelp(message):
 
 # Returns the ID of the item
 def GetItem(name):
+  if(name.contains("’")):
+    name.replace("’","'")
   name = name.strip().lower()
   url = "https://prices.runescape.wiki/api/v1/osrs/mapping"
   headers = {
@@ -55,6 +57,8 @@ def GetItem(name):
 
 # Returns the low and high price of the item
 def GetPrice(name):
+  if(name.contains("’")):
+    name.replace("’","'")
   id = GetItem(name)
   if id == -1:
     return -1
@@ -73,6 +77,8 @@ def GetPrice(name):
 # Adds or Removes from the daily list
 async def ChangeItem(message, name, type):
   await message.channel.send("Processing")
+  if(name.contains("’")):
+    name.replace("’","'")
   name = name.strip().lower()
   collection_name = mongoclient["profiles"][str(message.author.id)]
   found = 0
