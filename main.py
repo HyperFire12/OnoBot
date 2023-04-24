@@ -26,7 +26,7 @@ margin = [
 ]
 
 # commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !image {1-10} {256, 512 or 1024}", "- !recipe (breakfast, lunch, dinner, snack or teatime)"]
-commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !recipe (breakfast, lunch, dinner, snack or teatime)"]
+commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !recipe (breakfast, lunch, dinner, snack or teatime)", "- !hydrate"]
   
 error = [7228, 7466, 8624, 8628, 8626, 4595, 22636, 22634, 26602, 2203, 22622, 22613, 22610, 22647]
 
@@ -386,6 +386,9 @@ async def on_message(message):
         await PrintRecipe(message, "Teatime")
       else:
         await message.channel.send("Select either Breakfast, Lunch, Dinner, Snack or Teatime")
+
+  if message.content.startswith('!hydrate'):
+    await message.channel.send("@everyone !!! Hydrate :)")
 
 my_secret = os.environ.get('TOKEN')  # Environment variables - Hidden Token
 client.run(my_secret)  # Run the client
