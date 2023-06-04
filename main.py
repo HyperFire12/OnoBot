@@ -25,8 +25,8 @@ margin = [
   
 ]
 
-# commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !image {1-10} {256, 512 or 1024}", "- !recipe (breakfast, lunch, dinner, snack or teatime)"]
-commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !recipe (breakfast, lunch, dinner, snack or teatime)", "- !hydrate"]
+# commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !fund (add/remove/redeem (amount), balance, funded or list)", "- !image {1-10} {256, 512 or 1024}", "- !recipe (breakfast, lunch, dinner, snack or teatime)"]
+commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !fund (add/remove/redeem (amount), balance, funded or list)", "- !recipe (breakfast, lunch, dinner, snack or teatime)", "- !hydrate"]
   
 error = [7228, 7466, 8624, 8628, 8626, 4595, 22636, 22634, 26602, 2203, 22622, 22613, 22610, 22647]
 
@@ -188,6 +188,7 @@ async def PrintMargins(message, max):
   s += "`"
   await message.channel.send(s)
 
+# Prints the herbs with a cap
 async def PrintHerbs(message):
   await message.channel.send("Processing")
   rs = GetPrice("Ranarr Seed")
@@ -226,6 +227,93 @@ async def PrintHerbs(message):
     await message.channel.send("---")
     await message.channel.send("`Ranarr Seed: " + "{:,}".format(rseed) +"`\n`Ranarr Weed: " + 
                                  "{:,}".format(rweed) + "`\n`Ranarr Profitability: " + "{:,}".format(rp) + "`")
+
+# Changes amounts in the Fund DB
+async def ChangeFund(message, amount, type):
+  await message.channel.send("Processing")
+  amount = int(amount)
+  if(type == "add"):
+    collection_total = mongoclient["fund"]["total"]
+    x = collection_total.find_one()
+    myquery = {"amount": x["amount"]}
+    totalamount = int(x["amount"]) + amount
+    newvalues = {"$set": { "amount": totalamount }}
+    collection_total.update_one(myquery, newvalues)
+    await message.channel.send("Added " + "{:,}".format(amount) + " gp" )
+
+    if(str(message.author.id) in mongoclient["fund"].list_collection_names()):
+      collection_name = mongoclient["fund"][str(message.author.id)]
+      x = collection_name.find_one()
+      mypersonalquery = {"amount" : x["amount"]}
+      personalamount = int(x["amount"]) + amount
+      newpersonalvalues = {"$set": { "amount": personalamount }}
+      collection_name.update_one(mypersonalquery, newpersonalvalues)
+    else:
+      collection_name = mongoclient["fund"][str(message.author.id)]
+      collection_name.insert_one({"amount":amount})
+  else:
+    if(type == "remove"):
+      collection_total = mongoclient["fund"]["total"]
+      x = collection_total.find_one()
+      if(int(x["amount"]) - amount < 0):
+        await message.channel.send("Not Enough In Fund\nThe Fund has " + "{:,}".format(int(x["amount"])) + " gp")
+        return
+      myquery = {"amount": x["amount"]}
+      totalamount = int(x["amount"]) - amount
+      newvalues = {"$set": { "amount": totalamount }}
+      collection_total.update_one(myquery, newvalues)
+      await message.channel.send("Removed " + "{:,}".format(amount) + " gp")
+    else:
+      if(type == "redeem"):
+        collection_total = mongoclient["fund"]["total"]
+        x = collection_total.find_one()
+        if(int(x["amount"]) - amount < 0):
+            await message.channel.send("Not Enough In Fund\nThe Fund has " + "{:,}".format(int(x["amount"])) + " gp" )
+            return
+        myquery = {"amount": x["amount"]}
+        totalamount = int(x["amount"]) - amount
+        newvalues = {"$set": { "amount": totalamount }}
+        collection_total.update_one(myquery, newvalues)
+
+        collection_redeem = mongoclient["fund"]["funded"]
+        y = collection_redeem.find_one()
+        myquery = {"amount": y["amount"]}
+        totalamount = int(y["amount"]) + 1
+        newvalues = {"$set": { "amount": totalamount }}
+        collection_redeem.update_one(myquery, newvalues)
+        await message.channel.send("Redeemed 1 Bond for " + "{:,}".format(amount) + " gp")
+      else:
+        if(type == "funded"):
+          collection_redeem = mongoclient["fund"]["funded"]
+          x = collection_redeem.find_one()
+          if(int(x["amount"]) - amount < 0):
+            await message.channel.send("Not Enough In Funded\nThere are " + "{:,}".format(int(x["amount"])) + " Funded" )
+            return
+          myquery = {"amount": x["amount"]}
+          totalamount = int(x["amount"]) - amount
+          newvalues = {"$set": { "amount": totalamount }}
+          collection_redeem.update_one(myquery, newvalues)
+          await message.channel.send("Removed Funded by " + "{:,}".format(amount))
+
+# Prints from the Fund DB
+async def GetFund(message, type):
+  await message.channel.send("Processing")
+  db_name = mongoclient["fund"]
+  if(type == "balance"):
+    collection_name = db_name["total"]
+    amount = collection_name.find_one()["amount"]
+    await message.channel.send("`Outstanding Funds: " + "{:,}".format(int(amount)) + " gp`")
+  if(type == "funded"):
+    collection_name = db_name["funded"]
+    amount = collection_name.find_one()["amount"]
+    await message.channel.send("`Bonds Funded: " + "{:,}".format(int(amount)) + "`")
+  if(type == "list"):
+    s = ""
+    for x in db_name.list_collection_names():
+      if(x != "total" and x != "funded"):
+        s += "<@" + str(x) + "> : " + "{:,}".format(db_name[x].find_one()["amount"]) + " gp\n" 
+    await message.channel.send(s)
+
 
 # async def PrintImage(message, p, num, size):
 #   await message.channel.send("Processing")
@@ -338,6 +426,80 @@ async def on_message(message):
 
   if message.content.startswith('!herb'):
     await PrintHerbs(message)
+
+  if message.guild.id == int(os.environ.get('DISCORD_SERVER')):
+    if message.content.startswith('!fund'):
+      mess = message.content.split()
+      if(mess[1] == "add"):
+        msg = message.content.removeprefix("!fund add ")
+        if(re.search("^\d+(k|m|b|)$", msg)):
+          deg = msg[len(msg)-1]
+          m = msg.rstrip("kmb")
+          if(deg == "k"):  
+            m += "000"          
+          elif(deg == "m"):
+            m += "000000"
+          elif(deg == "b"):
+            m += "000000000"
+          await ChangeFund(message, m, "add")
+        else:
+          await message.channel.send("Please Enter a Valid Number")
+      else:
+        if(mess[1] == "remove"):
+          msg = message.content.removeprefix("!fund remove ")
+          if(re.search("^\d+(k|m|b|)$", msg)):
+            deg = msg[len(msg)-1]
+            m = msg.rstrip("kmb")
+            if(deg == "k"):  
+              m += "000"          
+            elif(deg == "m"):
+              m += "000000"
+            elif(deg == "b"):
+              m += "000000000"
+            await ChangeFund(message, m, "remove")
+          else:
+            await message.channel.send("Please Enter a Valid Number")
+        else:
+          if(mess[1] == "balance"):
+            await GetFund(message, "balance")
+          else:
+            if(mess[1] == "redeem"):
+              msg = message.content.removeprefix("!fund redeem ")
+              if(re.search("^\d+(k|m|b|)$", msg)):
+                deg = msg[len(msg)-1]
+                m = msg.rstrip("kmb")
+                if(deg == "k"):  
+                  m += "000"          
+                elif(deg == "m"):
+                  m += "000000"
+                elif(deg == "b"):
+                  m += "000000000"
+                await ChangeFund(message, m, "redeem")
+              else:
+                await message.channel.send("Please Enter a Valid Number")
+            else:
+              if(mess[1] == "funded"):
+                await GetFund(message, "funded")
+              else:
+                if(mess[1] == "rfunded"):
+                  msg = message.content.removeprefix("!fund rfunded ")
+                  if(re.search("^\d+(k|m|b|)$", msg)):
+                    deg = msg[len(msg)-1]
+                    m = msg.rstrip("kmb")
+                    if(deg == "k"):  
+                      m += "000"          
+                    elif(deg == "m"):
+                      m += "000000"
+                    elif(deg == "b"):
+                      m += "000000000"
+                    await ChangeFund(message, m, "funded")
+                  else:
+                    await message.channel.send("Please Enter a Valid Number")
+                else:
+                  if(mess[1] == "list"):
+                    await GetFund(message, "list")
+                  else:
+                    await message.channel.send("Invalid")
   
   # if message.content.startswith('!image'):
   #   mess = message.content.split()
