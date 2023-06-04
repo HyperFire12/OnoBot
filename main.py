@@ -250,7 +250,7 @@ async def ChangeFund(message, amount, type):
       collection_name.update_one(mypersonalquery, newpersonalvalues)
     else:
       collection_name = mongoclient["fund"][str(message.author.id)]
-      collection_name.insert_one({"amount":amount})
+      collection_name.insert_one({"amount":amount, "name":message.author.name})
   else:
     if(type == "remove"):
       collection_total = mongoclient["fund"]["total"]
@@ -311,7 +311,7 @@ async def GetFund(message, type):
     s = ""
     for x in db_name.list_collection_names():
       if(x != "total" and x != "funded"):
-        s += "<@" + str(x) + "> : " + "{:,}".format(db_name[x].find_one()["amount"]) + " gp\n" 
+        s += str(db_name[x].find_one()["name"]) + ": " + "{:,}".format(db_name[x].find_one()["amount"]) + " gp\n" 
     await message.channel.send(s)
 
 
