@@ -411,7 +411,7 @@ async def GetGamble(message, type):
         await message.channel.send(s.rstrip(", "))
   else:
     collection_name = mongoclient["gamble"][str(message.author.id)]
-    collection_name.insert_one({"amount":100, "name":message.author.name, "items":[]})
+    collection_name.insert_one({"amount":100, "name":message.author.name, "pets":[]})
     x = collection_name.find_one()
     if(type == "balance"):
       await message.channel.send("You have " + "{:,}".format(int(x["amount"])) + " gp" )
