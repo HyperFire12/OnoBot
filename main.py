@@ -1,5 +1,6 @@
 import os  # Import os dependency
 import discord  # Import discord dependency
+from discord.ext import tasks
 import requests
 import json
 import re
@@ -8,6 +9,7 @@ import pymongo
 import random
 import string
 import math
+import random
 from OSRSItem import OSRSItem
 
 intents = discord.Intents.default()
@@ -25,8 +27,12 @@ margin = [
   
 ]
 
-# commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !fund (add/redeem (amount), balance, funded or list)", "- !image {1-10} {256, 512 or 1024}", "- !recipe (breakfast, lunch, dinner, snack or teatime)"]
-commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !fund (add/redeem (amount), balance, funded or list)", "- !recipe (breakfast, lunch, dinner, snack or teatime)", "- !hydrate"]
+pets = [
+  "Baby Chinchompa", "Beaver", "Giant Squirrel", "Heron", "Rift Guardian", "Rock Golem", "Rocky", "Tangleroot"
+]
+
+# commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !fund (add/redeem (amount), balance, funded or list)", "!gamble (amount or balance)", "- !image {1-10} {256, 512 or 1024}", "- !recipe (breakfast, lunch, dinner, snack or teatime)"]
+commands = ["- !price (item)","- !daily {add/remove (item) or list (@User/User ID)}","- !margin {price}", "- !herbs", "- !nuts", "- !fund (add/redeem (amount), balance, funded or list)", "!gamble (amount or balance)", "- !recipe (breakfast, lunch, dinner, snack or teatime)", "- !hydrate"]
   
 error = [7228, 7466, 8624, 8628, 8626, 4595, 22636, 22634, 26602, 2203, 22622, 22613, 22610, 22647]
 
@@ -256,7 +262,7 @@ async def ChangeFund(message, amount, type):
       collection_total = mongoclient["fund"]["total"]
       x = collection_total.find_one()
       if(int(x["amount"]) - amount < 0):
-        await message.channel.send("Not Enough In Fund\nThe Fund has " + "{:,}".format(int(x["amount"])) + " gp")
+        await message.channel.send("Not enough in Fund\nThe Fund has " + "{:,}".format(int(x["amount"])) + " gp")
         return
       myquery = {"amount": x["amount"]}
       totalamount = int(x["amount"]) - amount
@@ -268,7 +274,7 @@ async def ChangeFund(message, amount, type):
         collection_total = mongoclient["fund"]["total"]
         x = collection_total.find_one()
         if(int(x["amount"]) - amount < 0):
-            await message.channel.send("Not Enough In Fund\nThe Fund has " + "{:,}".format(int(x["amount"])) + " gp" )
+            await message.channel.send("Not enough in Fund\nThe Fund has " + "{:,}".format(int(x["amount"])) + " gp" )
             return
         myquery = {"amount": x["amount"]}
         totalamount = int(x["amount"]) - amount
@@ -287,7 +293,7 @@ async def ChangeFund(message, amount, type):
           collection_redeem = mongoclient["fund"]["funded"]
           x = collection_redeem.find_one()
           if(int(x["amount"]) - amount < 0):
-            await message.channel.send("Not Enough In Funded\nThere are " + "{:,}".format(int(x["amount"])) + " Funded" )
+            await message.channel.send("Not enough in Funded\nThere are " + "{:,}".format(int(x["amount"])) + " Funded" )
             return
           myquery = {"amount": x["amount"]}
           totalamount = int(x["amount"]) - amount
@@ -314,7 +320,104 @@ async def GetFund(message, type):
         s += str(db_name[x].find_one()["name"]) + ": " + "{:,}".format(db_name[x].find_one()["amount"]) + " gp\n" 
     await message.channel.send(s)
 
+# Refund every day
+@tasks.loop(hours=24)
+async def Refund():
+  for user in mongoclient["gamble"].list_collection_names():
+    collection_name = mongoclient["gamble"][user]
+    x = collection_name.find_one()
+    if(x["amount"] < 100):
+      mypersonalquery = {"amount" : x["amount"]}
+      newpersonalvalues = {"$set": { "amount": 100 }}
+      collection_name.update_one(mypersonalquery, newpersonalvalues)
 
+# Roll for Pet
+def Roll(length):
+  x = random.randint(1,3000)
+  if(x == 69):
+    y = random.randint(0, length)
+    return y
+  return -1
+
+# Gamble gp
+def Gamble():
+  winner = False
+  x = random.randint(1,100)
+  if(x < 51):
+    winner = True
+  return winner
+
+# Changes amount and pets in the Gamble DB
+async def ChangeGamble(message, amount, unprocessed):
+  if unprocessed:
+    await message.channel.send("Processing")
+  amount = int(amount)
+  if(str(message.author.id) in mongoclient["gamble"].list_collection_names()):
+    collection_name = mongoclient["gamble"][str(message.author.id)]
+    x = collection_name.find_one()
+    if(int(x["amount"]) < amount):
+      await message.channel.send("You don't have that kind of gp\nYou have " + "{:,}".format(int(x["amount"])) + " gp" )
+      return
+    if(Gamble()):
+      personalamount = int(x["amount"]) + amount
+      await message.channel.send("You won!")
+    else:
+      personalamount = int(x["amount"]) - amount
+      await message.channel.send("You lost :(")
+    mypersonalquery = {"amount" : x["amount"]}
+    newpersonalvalues = {"$set": { "amount": personalamount }}
+    collection_name.update_one(mypersonalquery, newpersonalvalues)
+    x = collection_name.find_one()
+    await message.channel.send("You have " + "{:,}".format(int(x["amount"])) + " gp" )
+    if(amount > 99):
+      newpets = pets.copy()
+      for pet in x["pets"]:
+        newpets.remove(pet)
+      if(len(newpets) == 0):
+        return
+      roll = Roll(len(newpets)-1)
+      if(roll != -1):
+        petquery = {"pets" : x["pets"]}
+        if(len(x["pets"]) == 0):
+          personalpets = [newpets[roll]]
+        else:
+          personalpets = x["pets"].copy()
+          personalpets.append(newpets[roll])
+        newpersonalpets = {"$set": { "pets": personalpets }}
+        collection_name.update_one(petquery, newpersonalpets)
+        await message.channel.send("You have a funny feeling like you're being followed...\n" + newpets[roll] + " is following you!")
+  else:
+    collection_name = mongoclient["gamble"][str(message.author.id)]
+    collection_name.insert_one({"amount":100, "name":message.author.name, "pets":[]})
+    if(amount > 100):
+      await message.channel.send("You don't have that kind of gp\nYou have 100 gp" )
+      return
+    await ChangeGamble(message, amount, False)
+
+# Prints from the Gamble DB
+async def GetGamble(message, type):
+  if(str(message.author.id) in mongoclient["gamble"].list_collection_names()):
+    collection_name = mongoclient["gamble"][str(message.author.id)]
+    x = collection_name.find_one()
+    if(type == "balance"):
+      await message.channel.send("You have " + "{:,}".format(int(x["amount"])) + " gp" )
+    else:
+      if(len(x["pets"]) == 0):
+        await message.channel.send("You don't have any Pets")
+      else:
+        s = "Pets: "
+        for pet in x["pets"]:
+          s += pet + ", "
+        await message.channel.send(s.rstrip(", "))
+  else:
+    collection_name = mongoclient["gamble"][str(message.author.id)]
+    collection_name.insert_one({"amount":100, "name":message.author.name, "items":[]})
+    x = collection_name.find_one()
+    if(type == "balance"):
+      await message.channel.send("You have " + "{:,}".format(int(x["amount"])) + " gp" )
+    else:
+      await message.channel.send("You don't have any Pets")
+    
 # async def PrintImage(message, p, num, size):
 #   await message.channel.send("Processing")
 #   if(size == 256):  
@@ -351,6 +454,7 @@ async def PrintRecipe(message, meal):
 async def on_ready():  # Will be called when bot is ready to be used
   print('We have logged in as {0.user}'.format(client))
   await client.change_presence(activity=discord.Activity(name="!help", type=1))
+  await Refund.start()
 
 @client.event
 async def on_message(message):
@@ -501,6 +605,28 @@ async def on_message(message):
                   else:
                     await message.channel.send("Invalid")
   
+  if message.content.startswith('!gamble'):
+    mess = message.content.split()
+    if(mess[1] == "balance"):
+      await GetGamble(message, "balance")
+    else:  
+      if(mess[1] == "pets"):
+        await GetGamble(message, "pets")
+      else:
+        msg = message.content.removeprefix("!gamble ")
+        if(re.search("^\d+(k|m|b|)$", msg)):
+          deg = msg[len(msg)-1]
+          m = msg.rstrip("kmb")
+          if(deg == "k"):  
+            m += "000"          
+          elif(deg == "m"):
+            m += "000000"
+          elif(deg == "b"):
+            m += "000000000"
+          await ChangeGamble(message, m, True)
+        else:
+          await message.channel.send("Please Enter a Valid Number")
+
   # if message.content.startswith('!image'):
   #   mess = message.content.split()
   #   if(mess[1].isnumeric()):
