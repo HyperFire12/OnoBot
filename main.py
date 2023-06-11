@@ -333,7 +333,7 @@ async def Refund():
 
 # Roll for Pet
 def Roll(length):
-  x = random.randint(1,3000)
+  x = random.randint(1,1000)
   if(x == 69):
     y = random.randint(0, length)
     return y
@@ -369,7 +369,7 @@ async def ChangeGamble(message, amount, unprocessed):
     collection_name.update_one(mypersonalquery, newpersonalvalues)
     x = collection_name.find_one()
     await message.channel.send("You have " + "{:,}".format(int(x["amount"])) + " gp" )
-    if(amount > 99):
+    if(amount > 9):
       newpets = pets.copy()
       for pet in x["pets"]:
         newpets.remove(pet)
